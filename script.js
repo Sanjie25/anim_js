@@ -2199,3 +2199,81 @@ class Word {
 const word = new Word(30, 100, "HELLO", true,);
 word.getPixels();
 word.draw(ctx);
+
+class Player {
+  constructor(x, y, vx, vy, health = 10, power = "weakling") {
+    this.x = x;
+    this.y = y;
+    this.health = health;
+    this.vx = vx;
+    this.vy = vy;
+    this.health = health;
+    this.power = power;
+
+    // defining the path;
+    this.path = new Path2D();
+
+  }
+
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+  }
+
+  draw(ctx) {
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    this.path.arc(this.x + 30, this.y + 30, 30, 0, 2 * Math.PI, false);
+    this.path.moveTo(this.x + 40, this.y + 50);
+    this.path.lineTo(this.x + 40, this.y + 10);
+    this.path.lineTo(this.x + 80, this.y + 30);
+
+    ctx.fillStyle = "rgba(90 144 14 / 75%)";
+    ctx.fill(this.path);
+  }
+
+}
+
+
+let player1 = new Player(25, 25, 0, 0);
+
+function draw() {
+  ctx.globalCompositeOperation = "source-over";
+  document.addEventListener("keydown", (key) => {
+    if (key.key == "ArrowDown") {
+      player1.vy = 10;
+    } else {
+      player1.vy = 0;
+    }
+  });
+
+
+  console.log("before clear");
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  console.log("after clear");
+
+  // ctx.save()
+
+
+  const time = new Date();
+
+  // if (player1.x + player1.vx < 1400) {
+  //   player1.vx = 10;
+  // } else {
+  //   player1.vx = 0;
+  // }
+  console.log(player1.vx);
+  player1.update();
+  player1.vy = 0;
+
+  player1.draw(ctx);
+  // ctx.restore();
+  window.requestAnimationFrame(draw);
+}
+
+
+function init() {
+  window.requestAnimationFrame(draw);
+}
+
+init();
