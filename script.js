@@ -2231,6 +2231,52 @@ class Word {
       element.draw(ctx);
     }
   }
+
+  fire() {
+    const currentTime = Date.now();
+    if (currentTime - this.lastFireTime > this.fireRate) {
+      this.lastFireTime = currentTime;
+      const posX = this.x + (this.word.length * (this.size * 10)) / 2;
+      const posY = this.y + 40;
+      return new Bullet(posX, posY, -8, 0, "#ff7777");
+    }
+    return null;
+  }
+
+  getArea() {
+    if (this.pixels.length == 0) return null;
+    let minX = this.pixels[0].x;
+    let maxX = this.pixels[0].x + (this.pixels[0].size * 8);
+    let minY = this.pixels[0].y;
+    let maxY = this.pixels[0].y + (this.pixels[0].size * 8);
+
+    this.pixels.forEach(pixel => {
+      minX = Math.min(minX, pixel.x);
+      maxX = Math.max(maxX, pixel.x + pixel.size);
+      minY = Math.min(minY, pixel.y);
+      maxY = Math.max(maxY, pixel.y + pixel.size);
+    });
+
+    return {
+      x: minX,
+      y: minY,
+      width: maxX - minX,
+      height: maxY, minY
+    };
+  }
+
+  hit(bullet) {
+    this.pixels.forEach(pixel => {
+      if (bullet.x < pixel.x + pixel.size &&
+        bullet.x + bullet.size > pixel.x &&
+        bullet.y < pixel.y + pixel.size &&
+        bullet.y + bullet.size > pixel.y) {
+        this.pixels.forEach(p => p.break());
+        return true;
+      }
+    })
+    return false;
+  }
 }
 // ------------------------------ WORD END ---------------------
 
@@ -2260,6 +2306,15 @@ class Bullet {
       ctx.fillStyle = this.color;
       ctx.fillRect(this.x, this.y, this.size, this.size);
     }
+  }
+
+  getArea() {
+    return {
+      x: this.x,
+      y: this.y,
+      width: this.size,
+      height: this.size
+    };
   }
 }
 // --------------------------- BULLLET END ---------------------
@@ -2356,18 +2411,38 @@ function inputs() {
   }
 }
 
+function collisions() {
+  for (let index = 0; index < playerBullets.length; index++) {
+    const bullet = playerBullets[index];
+
+    if (!bullet.alive) continue;
+
+    for (let j = 0; j < words.length; j++) {
+      const word = words[j];
+      if (!word.alive) continue;
+
+      if (word.hit(bullet)) {
+        bullet.alive = false;
+        break;
+      }
+
+    }
+  }
+}
+
 function update() {
   inputs();
   player1.update();
   words.forEach(word => {
     if (word.alive) {
       word.update();
-      console.log(word.word)
     }
   });
 
   playerBullets.forEach(bullet => bullet.update());
   playerBullets = playerBullets.filter(bullet => bullet.alive);
+
+  collisions();
 }
 
 function draw() {
