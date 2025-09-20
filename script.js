@@ -2,6 +2,8 @@
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 const win = document.getElementById("winscreen")
+const div = document.getElementById("mydiv")
+div.style.cursor = "none";
 
 canvas.width = 1600;
 canvas.height = 900;
@@ -2235,7 +2237,7 @@ class Word {
 
   fire() {
     const currentTime = Date.now();
-    if (currentTime - this.lastFireTime > this.fireRate) {
+    if ((currentTime - this.lastFireTime > this.fireRate) && this.alive) {
       this.lastFireTime = currentTime;
       const posX = this.x + (this.word.length * (this.size * 10)) / 2;
       const posY = this.y + 40;
@@ -2341,10 +2343,12 @@ class Player {
   }
 
   update() {
-    this.x += this.vx;
     this.y += this.vy;
-
-    if (this.x + this.size * 2 > canvas.height || this.x < 0) {
+    this.x += this.vx;
+    if (!(this.y + this.size * 2 < canvas.height && this.y > 0)) {
+      this.y -= this.vy;
+    }
+    if (!(this.x + this.size * 2 + 20 < canvas.width && this.x > 0)) {
       this.x -= this.vx;
     }
     this.vx = 0;
@@ -2367,11 +2371,11 @@ class Player {
 
   }
 
-  fire() {
+  fire(vx, vy) {
     const currentTime = Date.now();
     if (currentTime - this.lastFireTime > this.fireRate) {
       this.lastFireTime = currentTime;
-      return new Bullet(this.x + this.size * 2, this.y + this.size, 10, 0, "#00ffff");
+      return new Bullet(this.x + this.size * 2, this.y + this.size, vx, vy, "#00ffff");
     }
     return null;
   }
@@ -2405,6 +2409,11 @@ let words = [
 ];
 let playerBullets = [];
 let enemyBullets = [];
+let mousePos = { x: 0, y: 0 };
+window.addEventListener('mousemove', (e) => {
+  mousePos.x = e.clientX;
+  mousePos.y = e.clientY;
+});
 
 const keys = {};
 
@@ -2424,15 +2433,33 @@ function inputs() {
   if (keys['ArrowDown']) {
     player1.vy = 5;
   }
+  if (keys['ArrowRight']) {
+    player1.vx = 5;
+  }
+
+  if (keys['ArrowLeft']) {
+    player1.vx = -5;
+  }
 
   if (keys['Space']) {
-    const bullet = player1.fire();
+    const distX = -(player1.x - mousePos.x);
+    const distY = -(player1.y - mousePos.y);
+    const hypo = Math.hypot(distY, distX)
+    const bullet = player1.fire(10 * (distX / hypo), 10 * (distY / hypo));
     if (bullet) {
       playerBullets.push(bullet);
     }
   }
 }
 
+// if (keys['Space']) {
+//   const distX = abs(player1.x - mousePos.x);
+//   const distY = abs(player1.y - mousePos.y);
+//   const bullet = player1.fire(10 * Math.tan(distY / distX), 10 * (1/*Math.tan(distY/distX)));
+//   if (bullet) {
+//     playerBullets.push(bullet);
+//   }
+// }
 function collisions() {
   for (let index = 0; index < playerBullets.length; index++) {
     const bullet = playerBullets[index];
@@ -2483,6 +2510,7 @@ function update() {
     }
   });
 
+
   playerBullets.forEach(bullet => bullet.update());
   playerBullets = playerBullets.filter(bullet => bullet.alive);
   enemyBullets.forEach(bullet => bullet.update());
@@ -2491,11 +2519,15 @@ function update() {
   collisions();
 
   const aliveWords = words.filter(word => word.alive);
+  if (aliveWords.length < 3) {
+    words.push(new Word(1100, (Math.random() * 800), "RANDOM"));
+  }
   if (aliveWords.length == 0) {
-    win.style.display = "block";
-    ctx.font = '40px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText("you won", canvas.width / 2, canvas.height / 2);
+    console.log("all dead");
+    // win.style.display = "block";
+    // ctx.font = '40px sans-serif';
+    // ctx.textAlign = 'center';
+    // ctx.fillText("you won", canvas.width / 2, canvas.height / 2);
   }
 }
 
@@ -2507,6 +2539,12 @@ function draw() {
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   // ctx.fillStyle = "rgba(255 255 255 / 75%)";
+  ctx.fillStyle = "rgba(0 255 0 / 50%)";
+  ctx.fillRect(mousePos.x, mousePos.y, 5, 5);
+  ctx.fillRect(mousePos.x + 10, mousePos.y, 15, 5);
+  ctx.fillRect(mousePos.x - 20, mousePos.y, 15, 5);
+  ctx.fillRect(mousePos.x, mousePos.y + 10, 5, 15);
+  ctx.fillRect(mousePos.x, mousePos.y - 20, 5, 15);
 
   player1.draw(ctx);
   words.forEach(word => {
