@@ -1,6 +1,7 @@
 
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
+const win = document.getElementById("winscreen")
 
 canvas.width = 1600;
 canvas.height = 900;
@@ -2343,6 +2344,9 @@ class Player {
     this.x += this.vx;
     this.y += this.vy;
 
+    if (this.x + this.size * 2 > canvas.height || this.x < 0) {
+      this.x -= this.vx;
+    }
     this.vx = 0;
     this.vy = 0;
   }
@@ -2488,6 +2492,7 @@ function update() {
 
   const aliveWords = words.filter(word => word.alive);
   if (aliveWords.length == 0) {
+    win.style.display = "block";
     ctx.font = '40px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText("you won", canvas.width / 2, canvas.height / 2);
