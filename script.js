@@ -1,6 +1,11 @@
 
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
+
+canvas.width = 1600;
+canvas.height = 900;
+ctx.globalCompositeOperation = "source-over";
+
 const data = {
   "A": [
     [
@@ -2190,15 +2195,40 @@ class Word {
       this.pixels.forEach((letter) => {
         letter.forEach((pixel) => {
           pixel.draw(ctx);
+          console.log("nothign")
         })
       })
     }
   }
 }
 
-const word = new Word(30, 100, "HELLO", true,);
-word.getPixels();
-word.draw(ctx);
+class Bullet {
+  constructor(x, y, vx, vy, color = "#ffff00") {
+    this.x = x;
+    this.y = y;
+    this.vx = vx;
+    this.vy = vy;
+    this.color = color;
+    this.size = 4;
+    this.alive = true;
+  }
+
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+
+    if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
+      this.alive = false;
+    }
+  }
+
+  draw(ctx) {
+    if (this.alive) {
+      ctx.fillStyle = this.color;
+      ctx.fillRect(this.x, this.y, this.size, this.size);
+    }
+  }
+}
 
 class Player {
   constructor(x, y, vx, vy, health = 10, power = "weakling") {
@@ -2207,8 +2237,12 @@ class Player {
     this.health = health;
     this.vx = vx;
     this.vy = vy;
+    this.size = 30;
     this.health = health;
     this.power = power;
+    this.alive = true;
+    this.lastFireTime = 0;
+    this.fireRate = 200;
 
     // defining the path;
     this.path = new Path2D();
@@ -2218,62 +2252,97 @@ class Player {
   update() {
     this.x += this.vx;
     this.y += this.vy;
+
+    this.vx = 0;
+    this.vy = 0;
   }
 
   draw(ctx) {
+    if (!this.alive) return;
+    ctx.save();
+    // simple triangle ship
+    ctx.beginPath();
+    ctx.arc(this.x + this.size, this.y + this.size, 30, 0, 2 * Math.PI, false);
+    ctx.moveTo(this.x + 40, this.y + 50);
+    ctx.lineTo(this.x + 40, this.y + 10);
+    ctx.lineTo(this.x + 80, this.y + 30);
+    ctx.closePath();
+    ctx.fillStyle = '#7fffd4';
+    ctx.fill();
+    ctx.restore();
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    this.path.arc(this.x + 30, this.y + 30, 30, 0, 2 * Math.PI, false);
-    this.path.moveTo(this.x + 40, this.y + 50);
-    this.path.lineTo(this.x + 40, this.y + 10);
-    this.path.lineTo(this.x + 80, this.y + 30);
+  }
 
-    ctx.fillStyle = "rgba(90 144 14 / 75%)";
-    ctx.fill(this.path);
+  fire() {
+    const currentTime = Date.now();
+    if (currentTime - this.lastFireTime > this.fireRate) {
+      this.lastFireTime = currentTime;
+      return new Bullet(this.x + this.size * 2, this.y + this.size, 10, 0, "#00ffff");
+    }
+    return null;
   }
 
 }
 
 
 let player1 = new Player(25, 25, 0, 0);
+let playerBullets = [];
+
+const keys = {};
+
+document.addEventListener('keydown', (e) => {
+  keys[e.code] = true;
+})
+
+document.addEventListener('keyup', (e) => {
+  keys[e.code] = false;
+})
+
+function inputs() {
+  console.log(keys);
+  if (keys['ArrowUp']) {
+    player1.vy = -5;
+  }
+
+  if (keys['ArrowDown']) {
+    player1.vy = 5;
+  }
+
+  if (keys['Space']) {
+    const bullet = player1.fire();
+    if (bullet) {
+      playerBullets.push(bullet);
+    }
+  }
+}
+
+function update() {
+  inputs();
+  player1.update();
+
+  playerBullets.forEach(bullet => bullet.update());
+  playerBullets = playerBullets.filter(bullet => bullet.alive);
+}
 
 function draw() {
-  ctx.globalCompositeOperation = "source-over";
-  document.addEventListener("keydown", (key) => {
-    if (key.key == "ArrowDown") {
-      player1.vy = 10;
-    } else {
-      player1.vy = 0;
-    }
-  });
 
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  console.log("before clear");
+  ctx.fillStyle = "rgba(255 255 255 / 100%)";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  console.log("after clear");
 
-  // ctx.save()
-
-
-  const time = new Date();
-
-  // if (player1.x + player1.vx < 1400) {
-  //   player1.vx = 10;
-  // } else {
-  //   player1.vx = 0;
-  // }
-  console.log(player1.vx);
-  player1.update();
-  player1.vy = 0;
+  // ctx.fillStyle = "rgba(255 255 255 / 75%)";
 
   player1.draw(ctx);
-  // ctx.restore();
-  window.requestAnimationFrame(draw);
+
+  playerBullets.forEach(bullet => bullet.draw(ctx));
 }
 
 
 function init() {
-  window.requestAnimationFrame(draw);
+  update();
+  draw();
+  window.requestAnimationFrame(init);
 }
 
 init();
