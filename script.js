@@ -2140,25 +2140,49 @@ const data = {
   ]
 }
 
+// -------------- PIXEL -----------------------------------------
 class Pixel {
-  constructor(x, y, size) {
+  constructor(x, y, size, color = "#fff") {
     this.x = x;
     this.y = y;
     this.size = size;
+    this.color = color;
     this.vx = 0;
     this.vy = 0;
+    this.gravity = 0.5;
+    this.life = 180;
   }
 
   update() {
     this.x += this.vx;
     this.y += this.vy;
+
+    if (this.vx != 0 || this.vy != 0) {
+      this.vy += this.gravity;
+      this.life--;
+    }
+  }
+
+  break() {
+    this.vx = (Math.random() + 1) * 10;
+    this.vy = (Math.random() + 1) * 10;
+    this.color = '#ff0000';
   }
 
   draw(ctx) {
-    ctx.fillRect(this.x, this.y, this.size, this.size);
+    if (this.life > 0) {
+      ctx.fillStyle = this.color;
+      ctx.fillRect(this.x, this.y, this.size, this.size);
+    }
+  }
+
+  alive() {
+    return this.life > 0;
   }
 }
+// ------------------ PIXEL END --------------------------------
 
+// --------------------- WORD -----------------------------------
 class Word {
   constructor(x, y, word, alive = true, pixels = [], size = 10) {
     this.x = x;
@@ -2167,41 +2191,50 @@ class Word {
     this.alive = alive;
     this.pixels = pixels;
     this.size = size;
+    this.alive = true;
+    this.lastFireTime = 0;
+    this.fireRate = 2000;
+
+    this.getPixels();
   }
+
 
   getPixels() {
     for (let i = 0; i < this.word.length; i++) {
-      let joint = [];
       let grid = data[this.word[i]];
 
       grid.forEach((row, j) => {
         row.forEach((column, k) => {
           if (column == 1) {
-            let pic = new Pixel(this.x + i * 80 + k * this.size, this.y + j * this.size, this.size, this.size);
-            joint.push(pic);
+            let pic = new Pixel(this.x + i * 80 + k * this.size, this.y + j * this.size, this.size);
+            this.pixels.push(pic);
           }
         });
       });
-      this.pixels.push(joint);
     }
   }
 
-  // update() {
-  // }
+  update() {
+    this.pixels.forEach((pixel) => pixel.update());
+
+    this.pixels = this.pixels.filter(pixel => pixel.alive());
+
+    if (this.pixels.length == 0) {
+      this.alive = false;
+    }
+  }
 
   draw(ctx) {
-    console.log("ok")
-    for (let i = 0; i < this.word.length; i++) {
-      this.pixels.forEach((letter) => {
-        letter.forEach((pixel) => {
-          pixel.draw(ctx);
-          console.log("nothign")
-        })
-      })
+    // console.log(this.pixels);
+    for (let index = 0; index < this.pixels.length; index++) {
+      const element = this.pixels[index];
+      element.draw(ctx);
     }
   }
 }
+// ------------------------------ WORD END ---------------------
 
+// --------------------------- BULLET -------------------------
 class Bullet {
   constructor(x, y, vx, vy, color = "#ffff00") {
     this.x = x;
@@ -2229,7 +2262,9 @@ class Bullet {
     }
   }
 }
+// --------------------------- BULLLET END ---------------------
 
+// ----------------------------- PLAYER ------------------------------------
 class Player {
   constructor(x, y, vx, vy, health = 10, power = "weakling") {
     this.x = x;
@@ -2283,9 +2318,15 @@ class Player {
   }
 
 }
+// ------------------------------- PLAYER END --------------------------
 
 
 let player1 = new Player(25, 25, 0, 0);
+let words = [
+  new Word(1100, 100, "MARIA", true),
+  new Word(1100, 400, "SINA", true),
+  new Word(1100, 800, "ROSE", true),
+];
 let playerBullets = [];
 
 const keys = {};
@@ -2299,7 +2340,6 @@ document.addEventListener('keyup', (e) => {
 })
 
 function inputs() {
-  console.log(keys);
   if (keys['ArrowUp']) {
     player1.vy = -5;
   }
@@ -2319,6 +2359,12 @@ function inputs() {
 function update() {
   inputs();
   player1.update();
+  words.forEach(word => {
+    if (word.alive) {
+      word.update();
+      console.log(word.word)
+    }
+  });
 
   playerBullets.forEach(bullet => bullet.update());
   playerBullets = playerBullets.filter(bullet => bullet.alive);
@@ -2328,12 +2374,15 @@ function draw() {
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  ctx.fillStyle = "rgba(255 255 255 / 100%)";
+  ctx.fillStyle = "rgba(0 0 0 / 100%)";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   // ctx.fillStyle = "rgba(255 255 255 / 75%)";
 
   player1.draw(ctx);
+  words.forEach(word => {
+    word.draw(ctx);
+  });
 
   playerBullets.forEach(bullet => bullet.draw(ctx));
 }
