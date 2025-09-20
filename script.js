@@ -2372,6 +2372,23 @@ class Player {
     return null;
   }
 
+  getArea() {
+    return {
+      x: this.x,
+      y: this.y,
+      width: this.size * 2 + 20,
+      height: this.size * 2,
+    }
+  }
+  hit(bullet) {
+    if (bullet.x < this.x + this.size * 2 &&
+      bullet.x + bullet.size > this.x &&
+      bullet.y < this.y + this.size * 2 &&
+      bullet.y + bullet.size > this.y) {
+      return true;
+    }
+    return false;
+  }
 }
 // ------------------------------- PLAYER END --------------------------
 
@@ -2383,6 +2400,7 @@ let words = [
   new Word(1100, 800, "ROSE", true),
 ];
 let playerBullets = [];
+let enemyBullets = [];
 
 const keys = {};
 
@@ -2428,6 +2446,24 @@ function collisions() {
 
     }
   }
+
+  for (let index = 0; index < enemyBullets.length; index++) {
+    const bullet = enemyBullets[index];
+
+    if (!bullet.alive || !player1.alive) continue;
+
+    const bulletArea = bullet.getArea();
+    const playerArea = player1.getArea();
+
+
+    if (player1.hit(bullet)) {
+
+      console.log("hit!");
+      bullet.alive = false;
+
+      window.location.reload()
+    }
+  }
 }
 
 function update() {
@@ -2436,13 +2472,26 @@ function update() {
   words.forEach(word => {
     if (word.alive) {
       word.update();
+      const bullet = word.fire();
+      if (bullet) {
+        enemyBullets.push(bullet);
+      }
     }
   });
 
   playerBullets.forEach(bullet => bullet.update());
   playerBullets = playerBullets.filter(bullet => bullet.alive);
+  enemyBullets.forEach(bullet => bullet.update());
+  enemyBullets = enemyBullets.filter(bullet => bullet.alive);
 
   collisions();
+
+  const aliveWords = words.filter(word => word.alive);
+  if (aliveWords.length == 0) {
+    ctx.font = '40px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText("you won", canvas.width / 2, canvas.height / 2);
+  }
 }
 
 function draw() {
@@ -2460,6 +2509,7 @@ function draw() {
   });
 
   playerBullets.forEach(bullet => bullet.draw(ctx));
+  enemyBullets.forEach(bullet => bullet.draw(ctx));
 }
 
 
