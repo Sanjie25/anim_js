@@ -2493,14 +2493,6 @@ function inputs() {
   }
 }
 
-// if (keys['Space']) {
-//   const distX = abs(player1.x - mousePos.x);
-//   const distY = abs(player1.y - mousePos.y);
-//   const bullet = player1.fire(10 * Math.tan(distY / distX), 10 * (1/*Math.tan(distY/distX)));
-//   if (bullet) {
-//     playerBullets.push(bullet);
-//   }
-// }
 function collisions() {
   for (let index = 0; index < playerBullets.length; index++) {
     const bullet = playerBullets[index];
@@ -2527,7 +2519,6 @@ function collisions() {
 
     if (player1.hit(bullet)) {
 
-      // console.log("hit!");
       bullet.alive = false;
 
       // window.location.reload()
@@ -2563,12 +2554,6 @@ function update() {
   const aliveWords = words.filter(word => word.alive);
   if (aliveWords.length < 3) {
     words.push(new Word(1100, (Math.random() * 800), "RANDOM"));
-  }
-  if (aliveWords.length == 0) {
-    console.log("all dead");
-    // ctx.font = '40px sans-serif';
-    // ctx.textAlign = 'center';
-    // ctx.fillText("you won", canvas.width / 2, canvas.height / 2);
   }
 }
 

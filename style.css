@@ -55,3 +55,7 @@ canvas {
   text-align: center;
   font-size: 3rem;
 }
+
+button {
+  padding: 1rem;
+}
