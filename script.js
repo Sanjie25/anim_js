@@ -1,13 +1,20 @@
 
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
-const win = document.getElementById("winscreen")
+const gameOver = document.getElementById("game_over")
 const div = document.getElementById("mydiv")
+const start = document.getElementById("start")
+const startPage = document.getElementById("startpage")
 div.style.cursor = "none";
+canvas.style.display = "none";
+
 
 canvas.width = 1600;
 canvas.height = 900;
 ctx.globalCompositeOperation = "source-over";
+
+let gameLoop = false;
+
 
 const data = {
   "A": [
@@ -2142,21 +2149,38 @@ const data = {
     ]
   ]
 }
+// ------------------ Directions ---------------------------------
+const hypos = Math.hypot(1, 1)
+
+const directs = {
+  0: { x: (1 / hypos), y: (1 / hypos) },
+  1: { x: -(1 / hypos), y: (1 / hypos) },
+  2: { x: +(1 / hypos), y: -(1 / hypos) },
+  3: { x: -(1 / hypos), y: -(1 / hypos) }
+}
 
 // -------------- PIXEL -----------------------------------------
 class Pixel {
-  constructor(x, y, size, color = "#fff") {
+  constructor(x, y, spx, spy, size, color = "#fff") {
     this.x = x;
     this.y = y;
     this.size = size;
     this.color = color;
     this.vx = 0;
     this.vy = 0;
+    this.spx = spx;
+    this.spy = spy;
     this.gravity = 0.5;
     this.life = 180;
   }
 
-  update() {
+  update(vx, vy) {
+    this.spx = vx;
+    this.spy = vy;
+    if (this.life > 0) {
+      this.x += this.spx;
+      this.y += this.spy;
+    }
     this.x += this.vx;
     this.y += this.vy;
 
@@ -2191,12 +2215,16 @@ class Word {
     this.x = x;
     this.y = y;
     this.word = word;
-    this.alive = alive;
+    this.speed = 8;
+    this.vx = 2 * directs[Math.floor(Math.random() * 4)].x;
+    this.vy = 2 * directs[Math.floor(Math.random() * 4)].y;
     this.pixels = pixels;
     this.size = size;
     this.alive = true;
+    this.canFire = true;
     this.lastFireTime = 0;
-    this.fireRate = 2000;
+    this.fireRate = 100;
+    this.dir = directs[Math.floor(Math.random() * 4)];
 
     this.getPixels();
   }
@@ -2209,7 +2237,7 @@ class Word {
       grid.forEach((row, j) => {
         row.forEach((column, k) => {
           if (column == 1) {
-            let pic = new Pixel(this.x + i * 80 + k * this.size, this.y + j * this.size, this.size);
+            let pic = new Pixel(this.x + i * 80 + k * this.size, this.y + j * this.size, this.vx, this.vy, this.size);
             this.pixels.push(pic);
           }
         });
@@ -2218,7 +2246,20 @@ class Word {
   }
 
   update() {
-    this.pixels.forEach((pixel) => pixel.update());
+    this.x += this.vx;
+    this.y += this.vy;
+    // console.log(this.x, this.vx);
+    const area = this.getArea();
+    if (!(area.y + area.height < canvas.height * 1.9 && area.y > 0)) {
+      this.y -= this.vy;
+      this.vy = -this.vy;
+    }
+    if (!(area.x + area.width < canvas.width && area.x > 0)) {
+      this.x -= this.vx;
+      this.vx = -this.vx;
+    }
+
+    this.pixels.forEach((pixel) => pixel.update(this.vx, this.vy));
 
     this.pixels = this.pixels.filter(pixel => pixel.alive());
 
@@ -2235,13 +2276,13 @@ class Word {
     }
   }
 
-  fire() {
+  fire(dir) {
     const currentTime = Date.now();
-    if ((currentTime - this.lastFireTime > this.fireRate) && this.alive) {
+    if ((currentTime - this.lastFireTime > this.fireRate) && this.canFire) {
       this.lastFireTime = currentTime;
       const posX = this.x + (this.word.length * (this.size * 10)) / 2;
       const posY = this.y + 40;
-      return new Bullet(posX, posY, -8, 0, "#ff7777");
+      return new Bullet(posX, posY, 8 * dir.x, 8 * dir.y, "#ff7777");
     }
     return null;
   }
@@ -2275,6 +2316,7 @@ class Word {
         bullet.y < pixel.y + pixel.size &&
         bullet.y + bullet.size > pixel.y) {
         this.pixels.forEach(p => p.break());
+        this.canFire = false;
         return true;
       }
     })
@@ -2361,9 +2403,6 @@ class Player {
     // simple triangle ship
     ctx.beginPath();
     ctx.arc(this.x + this.size, this.y + this.size, 30, 0, 2 * Math.PI, false);
-    ctx.moveTo(this.x + 40, this.y + 50);
-    ctx.lineTo(this.x + 40, this.y + 10);
-    ctx.lineTo(this.x + 80, this.y + 30);
     ctx.closePath();
     ctx.fillStyle = '#7fffd4';
     ctx.fill();
@@ -2404,8 +2443,8 @@ class Player {
 let player1 = new Player(25, 25, 0, 0);
 let words = [
   new Word(1100, 100, "MARIA", true),
-  new Word(1100, 400, "SINA", true),
-  new Word(1100, 800, "ROSE", true),
+  new Word(600, 400, "SINA", true),
+  new Word(100, 800, "ROSE", true),
 ];
 let playerBullets = [];
 let enemyBullets = [];
@@ -2426,7 +2465,7 @@ document.addEventListener('keyup', (e) => {
 })
 
 function inputs() {
-  if (keys['ArrowUp']) {
+  if (keys['ArrowUp'] || keys['KeyW']) {
     player1.vy = -5;
   }
 
@@ -2483,16 +2522,15 @@ function collisions() {
 
     if (!bullet.alive || !player1.alive) continue;
 
-    const bulletArea = bullet.getArea();
-    const playerArea = player1.getArea();
-
 
     if (player1.hit(bullet)) {
 
-      console.log("hit!");
+      // console.log("hit!");
       bullet.alive = false;
 
-      window.location.reload()
+      // window.location.reload()
+      canvas.style.display = "none";
+      gameOver.style.display = "block";
     }
   }
 }
@@ -2503,7 +2541,7 @@ function update() {
   words.forEach(word => {
     if (word.alive) {
       word.update();
-      const bullet = word.fire();
+      const bullet = word.fire(directs[Math.floor(Math.random() * 4)]);
       if (bullet) {
         enemyBullets.push(bullet);
       }
@@ -2524,7 +2562,6 @@ function update() {
   }
   if (aliveWords.length == 0) {
     console.log("all dead");
-    // win.style.display = "block";
     // ctx.font = '40px sans-serif';
     // ctx.textAlign = 'center';
     // ctx.fillText("you won", canvas.width / 2, canvas.height / 2);
@@ -2557,9 +2594,19 @@ function draw() {
 
 
 function init() {
-  update();
-  draw();
-  window.requestAnimationFrame(init);
+  if (gameLoop) {
+    update();
+    draw();
+    window.requestAnimationFrame(init);
+  }
 }
 
-init();
+start.addEventListener("click", () => {
+  console.log("game: ", gameLoop);
+
+  gameLoop = true;
+  startPage.style.display = "none";
+  canvas.style.display = "block";
+  init();
+  console.log("click ", gameLoop);
+})
