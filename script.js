@@ -5,15 +5,16 @@ const gameOver = document.getElementById("game_over")
 const div = document.getElementById("mydiv")
 const start = document.getElementById("start")
 const startPage = document.getElementById("startpage")
+const score = document.getElementById("score")
 div.style.cursor = "none";
 canvas.style.display = "none";
-
 
 canvas.width = 1600;
 canvas.height = 900;
 ctx.globalCompositeOperation = "source-over";
 
 let gameLoop = false;
+let points = 0;
 
 
 const data = {
@@ -2316,6 +2317,7 @@ class Word {
         bullet.y < pixel.y + pixel.size &&
         bullet.y + bullet.size > pixel.y) {
         this.pixels.forEach(p => p.break());
+        points += 1;
         this.canFire = false;
         return true;
       }
@@ -2469,14 +2471,14 @@ function inputs() {
     player1.vy = -5;
   }
 
-  if (keys['ArrowDown']) {
+  if (keys['ArrowDown'] || keys['KeyS']) {
     player1.vy = 5;
   }
-  if (keys['ArrowRight']) {
+  if (keys['ArrowRight'] || keys['KeyD']) {
     player1.vx = 5;
   }
 
-  if (keys['ArrowLeft']) {
+  if (keys['ArrowLeft'] || keys['KeyA']) {
     player1.vx = -5;
   }
 
@@ -2529,7 +2531,9 @@ function collisions() {
       bullet.alive = false;
 
       // window.location.reload()
+
       canvas.style.display = "none";
+      score.textContent = points;
       gameOver.style.display = "block";
     }
   }
@@ -2569,7 +2573,6 @@ function update() {
 }
 
 function draw() {
-
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   ctx.fillStyle = "rgba(0 0 0 / 100%)";
@@ -2582,6 +2585,12 @@ function draw() {
   ctx.fillRect(mousePos.x - 20, mousePos.y, 15, 5);
   ctx.fillRect(mousePos.x, mousePos.y + 10, 5, 15);
   ctx.fillRect(mousePos.x, mousePos.y - 20, 5, 15);
+
+  ctx.save();
+  ctx.fillStyle = "rgba(0 255 0 / 75%)";
+  ctx.font = "48px serif";
+  ctx.fillText(points, 10, 50);
+  ctx.restore();
 
   player1.draw(ctx);
   words.forEach(word => {
